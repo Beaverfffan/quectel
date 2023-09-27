@@ -1,0 +1,145 @@
+#leovs @2023.6.2
+
+opengt
+ set com 115200n81
+ set comecho off
+ set senddelay 0.02
+ waitquiet 0.2 0.2
+
+let $g=$env("TIMEOUT")
+if $g = "" let f=25
+else let f = val($g)
+
+#获取模组工作电压
+send "AT+CBC^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取制造商标识
+send "AT+CGMI^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取模块型号
+send "AT+GMM^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取固件版本
+send "AT+GMR^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取IMEI
+send "AT+GSN^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取IMSI
+send "AT+CIMI^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取QCCID
+send "AT+QCCID^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取信号强度
+send "AT+CSQ^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取网络注册状态
+send "AT+CREG?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取GPRS附着状态
+send "AT+CGATT?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取本地IP地址
+#send "AT+CGPADDR^m"
+#let t=time()+f
+#gosub getresult
+#if $s="^mTIMEOUT ERROR" print $s
+
+#获取SIM卡状态
+send "AT+CPIN?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取SIM卡号码
+send "AT+CNUM?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#监测SIM卡
+send "AT+QSIMDET?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#监测SIM卡插入状态
+send "AT+QSIMSTAT?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取网络运营商
+send "AT+COPS?^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取网络运营商
+send "AT+QNWINFO^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取网络运营商
+send "AT+QSPN^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取模组温度
+send "AT+QTEMP^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+#获取电话号码
+send "AT+QENG=\"servingcell\"^m"
+let t=time()+f
+gosub getresult
+if $s="^mTIMEOUT ERROR" print $s
+
+exit 0
+
+:getresult
+get 1 "^m" $s
+let x=len($s)
+if x=0 let $s="^mTIMEOUT ERROR"
+else print $s
+if $s="^jOK" return
+if $mid($s,0,6)="^jERROR" return
+if $mid($s,0,8)="^jCOMMAND" return
+if $mid($s,0,11)="^j+CME ERROR" return
+if time()>t return
+goto getresult

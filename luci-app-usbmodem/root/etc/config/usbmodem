@@ -1,0 +1,6 @@
+config service
+	option tool 'quectel-cm'
+	option device '/dev/cdc-wdm0'
+	option enabled '0'
+    option readport '/dev/ttyUSB2'
+    option storage 'SM'

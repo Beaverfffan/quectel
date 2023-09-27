@@ -1,0 +1,247 @@
+<%
+local util = require "luci.util"
+local fs = require "nixio.fs"
+local sys = require "luci.sys"
+local http = require "luci.http"
+local dispatcher = require "luci.dispatcher"
+local uci = require "luci.model.uci".cursor()
+
+local devv = tostring(uci:get("usbmodem", "@service[0]", "readport"))
+local smsmem = tostring(uci:get("usbmodem", "@service[0]", "storage"))
+local sms = tostring(luci.sys.exec("sms_tool -s" .. smsmem .. " -d " .. devv .. " -f '%Y-%m-%d %H:%M' -j recv 2>/dev/null"))
+local smscuta = string.sub (sms, 8)
+local smscut = smscuta:sub(1, #smscuta - 2)
+local statusb = luci.util.exec("sms_tool -s" .. smsmem .. " -d ".. devv .. " status")
+local all = statusb:match('[^: ]+$')
+local location = ""
+
+local l = string.sub (statusb, 15, 16)
+if l == "SM" then
+location = translate("SIM卡")
+end
+if l == "ME" then
+location = translate("模组")
+end
+-%>
+<%+header%>
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    th, td {
+        border-bottom: 1px solid var(--border-color-medium);
+        font-size: 12px;
+        padding: 10px;
+        text-align: justify;
+        display: table-cell;
+        vertical-align: top;
+    }
+
+    td input[type="checkbox"] {
+        float: left;
+        margin: 0 auto;
+        width: 40%;
+    }
+
+    tr:nth-child(odd) {
+        background-color: var(--background-color-medium)
+    }
+
+    textarea {
+        height: 120px;
+        max-height: 120px;
+        min-height: 120px;
+        min-width: 100%;
+        resize: vertical;
+    }
+
+</style>
+<h4>收到信息</h4>
+<div class="table" width="100%">
+    <div class="tr">
+        <div class="td left" width="33%"><%:信息存储为%>:</div>
+        <div class="td left"><%=location%></div>
+    </div>
+    <div class="tr">
+        <div class="td left" width="33%"><%:消息 (已用/存储)%>:</div>
+        <div class="td left" id="usse"></div>
+    </div>
+</div>
+<table id="smsTable" width="100%" class="table">
+    <tr class="tr cbi-rowstyle-2">
+        <td class="td left" width="7%"><input type='checkbox' id='allcheck' onclick='toggle(this);'/></td>
+        <td class="td left" width="11%"><strong><%:来之%></strong></td>
+        <td class="td left" width="15%"><strong><%:时间%></strong></td>
+        <td class="td center" width="66%"><strong><%:信息%></strong></td>
+    </tr>
+</table>
+<div class="table" width="100%">
+    <div class="tr cbi-rowstyle-2">
+        <div class="td right" style="width:100%;">
+            <div style="float: left;"></div>
+            <input type="button" id="delbtn" class="btn cbi-button cbi-button-neutral" value="刷新短信" onclick="refreshSMS()"/>
+            <input style="margin-left: 10px" type="button" id="delabtn" class="btn cbi-button cbi-button-neutral" value="删除短信" onclick="deleteSms()"/>
+        </div>
+    </div>
+</div>
+
+<h4>发送信息</h4>
+<div class="table">
+    <div class="tr">
+        <div class="td left">发送给:</div>
+        <div class="td left"><input type="text" id="numer" onKeyUp="codsp()" required minlength="3" maxlength="24" size="11"></div>
+        <div class="td left">国内手机前加86, 例8618688886666</div>
+    </div>
+    <div class="tr">
+        <div class="td left">短信内容:</div>
+        <div class="td left"><textarea id="smstxt" onKeyUp="count_replace(this)" required></textarea>
+            <div id="counter">100</div>
+        </div>
+        <div class="td left"></div>
+    </div>
+    <div class="tr">
+        <div class="td left"><%:Status%>:</div>
+        <div class="td left" id="odp"></div>
+    </div>
+</div>
+<div class="table">
+    <div class="tr cbi-rowstyle-2">
+        <div class="td right"><input type="button" style="margin-right: 5%" onclick="sendSms()" class="btn cbi-button cbi-button-neutral" value="发送"/></div>
+    </div>
+</div>
+
+<script>
+    function toggle(source) {
+        var checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i] != source)
+                checkboxes[i].checked = source.checked;
+        }
+    }
+
+    function codsp() {
+        document.getElementById("odp").innerHTML = "";
+    }
+
+    function getSmsLength(){
+        return document.getElementById('smstxt').value.replace(/[\u0391-\uFFE5]/g, 'aa').length
+    }
+
+    function count_replace(obj) {
+        document.getElementById('counter').innerHTML = (100 - getSmsLength());
+        obj.value = obj.value.replace(/ą/g, 'a').replace(/Ą/g, 'A');
+        obj.value = obj.value.replace(/ć/g, 'c').replace(/Ć/g, 'C')
+        obj.value = obj.value.replace(/ę/g, 'e').replace(/Ę/g, 'E')
+        obj.value = obj.value.replace(/ł/g, 'l').replace(/Ł/g, 'L')
+        obj.value = obj.value.replace(/ń/g, 'n').replace(/Ń/g, 'N')
+        obj.value = obj.value.replace(/ó/g, 'o').replace(/Ó/g, 'O')
+        obj.value = obj.value.replace(/ś/g, 's').replace(/Ś/g, 'S')
+        obj.value = obj.value.replace(/ż/g, 'z').replace(/Ż/g, 'Z')
+        obj.value = obj.value.replace(/ź/g, 'z').replace(/Ź/g, 'Z');
+        document.getElementById("odp").innerHTML = "";
+    }
+
+    function refreshSMS() {
+        window.location.reload();
+    }
+
+    function deleteSms() {
+        if (document.querySelectorAll('input[name="smsn"]:checked').length == 0) {
+            alert('请先选择要删除的短信');
+            return;
+        }
+        var items = document.getElementsByName("smsn");
+        var selectedItems = "";
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type == "checkbox" && items[i].checked == true) selectedItems += items[i].id + "\n";
+        }
+        smsindex = selectedItems.replace(/\s/g, '');
+        if (confirm("确认删除选中的信息?")) {
+            XHR.get('<%=luci.dispatcher.build_url("admin", "network", "usbmodem", "delete_sms")%>/', {"idx":smsindex},
+                function () {
+                    var table = document.getElementById("smsTable");
+                    var index = 1;
+                    while (index < table.rows.length) {
+                        var input = table.rows[index].cells[0].children[0];
+                        if (input && input.checked) {
+                            table.deleteRow(index);
+                        } else {
+                            index++;
+                        }
+                    }
+                    window.location.reload();
+                }
+            );
+            return false;
+        }
+    }
+
+    function sendSms(){
+        var ph = document.getElementById("numer").value;
+        if ( ph.length < 2 || ph.length == 0 ) {
+            document.getElementById("odp").innerHTML = "";
+            alert("请输入号码");
+            return false;
+        }
+
+        ph = ph.trim();
+        if (isNaN(ph)) {
+            alert("号码不正确，请检查");
+            return false;
+        }
+        var tm = document.getElementById("smstxt").value;
+        if ( tm.length == 0 )        {
+            alert("请输入信息内容");
+            return false;
+        }
+        // 检查短信长度
+        if(getSmsLength() > 100 ) {
+            alert("短信内容超过100个字符");
+            return false;
+        }
+
+        // 内容编码
+        tm = window.btoa(unescape(encodeURIComponent(tm)));
+        (new XHR()).post("<%=luci.dispatcher.build_url("admin", "network", "usbmodem", "send_sms")%>", {"phone":ph, "msg":tm }, function(x) {
+            if ( x.response.indexOf("sms sent sucessfully") > -1 ) {
+                document.getElementById("odp").innerHTML = "发送成功"
+            } else {
+                document.getElementById("odp").innerHTML = "发送失败"
+            }
+        });
+    }
+
+    (function readSMS(){
+        XHR.get('<%=luci.dispatcher.build_url("admin", "network", "usbmodem", "read_sms")%>', null,
+            function(x, sim) {
+                var vn = parseInt(sim.use) || 0;
+                var mn = parseInt(sim.all) || 100;
+                var pc = Math.floor((100 / mn) * vn);
+                document.getElementById('usse').innerHTML=sim.use  + " / " + sim.all + " " + '('+ pc + '%)';
+            }
+        );
+
+        var array = <%=smscut%>;
+        var sortedData = array .sort((function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp) }));
+        var table = document.getElementById("smsTable");
+        var data = JSON.stringify(sortedData);
+        var json = JSON.parse(data);
+
+        var x = <%=all%>;
+        for (var d = 0; d < json.length; d++) {
+            row = table.insertRow(-1);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(0);
+            var cell3 = row.insertCell(0);
+            var cell4 = row.insertCell(0);
+            cell4.innerHTML = "<input type='checkbox' name='smsn' id="+"btn"+json[d].index+" />"
+            cell3.innerHTML = json[d].sender;
+            cell2.innerHTML = json[d].timestamp;
+            cell1.innerHTML = json[d].content;
+        }
+
+    })();
+</script>
+<%+footer%>

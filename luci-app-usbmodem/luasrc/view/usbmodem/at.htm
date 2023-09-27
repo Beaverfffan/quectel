@@ -1,0 +1,139 @@
+<%+header%>
+<h4>发送指令</h4>
+<textarea style="width: 100%" wrap="on" rows="20" id="log"></textarea>
+<div class="table" width="100%">
+    <div class="tr">
+        <div class="td left">指令:</div>
+        <div class="td left"><input type="text" id="code"></div>
+    </div>
+</div>
+
+<div class="tr">
+    <div class="td right"><input type="button" style="margin-right: 5%" onclick="sendAt()" class="btn cbi-button cbi-button-neutral" value="发送指令"/></div>
+</div>
+
+<pre style="margin-top: 20px">
+常用指令：
+广和通：
+AT+GTAUTOCONNECT=1     //RNDIS自动拨号
+AT+CESQ                //查询信号
+AT+GTSN=1,7,"IMEI"     //修改IMEI
+AT+CGDCONT=1,"IPV4V6","apn" //打开模块双栈
+AT+GTDUALSIM?          //查询使用的sim卡
+AT+GTDUALSIM=<0>       //切换SIM卡1
+AT+GTDUALSIM=<1>       //切换SIM卡2
+AT+GTUSBMODE=<mode>    //切换模块模式
+FM160模式如下
+17 DIAG + MODEM + AT + PIPE + RMNET + ADB
+18 DIAG + MODEM + AT + PIPE + ECM + ADB
+29 MBIM+AT+ DIAG
+30 MBIM + MODEM + DIAG + AT
+32 DIAG + MODEM + AT + PIPE + RMNET
+33 DIAG + MODEM + AT + PIPE + ECM
+FM650模式如下
+34 ECM+AT+DIAG+LOG
+35 ECM+AT+DIAG+LOG+ADB
+36 NCM+AT+MODEM+DIAG+LOG
+37 NCM+AT+MODEM+DIAG+LOG+ADB
+38 RNDIS+AT+MODEM+DIAG+LOG
+39 RNDIS+AT+MODEM+DIAG+LOG+ADB
+40 MBIM+AT+MODEM+DIAG+LOG
+41 MBIM+AT+MODEM+DIAG+LOG+ADB
+不要手贱尝试其他数字，没有AT的等于变砖
+
+其他模块
+AT+QCFG="usbnet",3	//RNDIS模式
+AT+QCFG="usbnet",2	//MBIM模式
+AT+QCFG="usbnet",1	//ECM模式
+AT+QCFG="usbnet",0	//QMI模式（RM500Q默认）
+AT+QCFG="usbnet"	//当前模式
+AT+QCFG=?           //查看支持的模式
+====
+AT+CBC		//模块电压检测
+AT+QPOWD	//模块关机
+AT+QNWINFO	//查看当前使用频段
+AT+QRSRQ	//查询 RSRQ 值
+AT+COPS?	//查看运营商
+AT+CREG?	//查询命令返回网络注册状态和结果码显示状态
+AT+QENG="neighbourcell"	//临近小区服务信息
+AT+QENG="servingcell"	//当前服务信息
+AT$QCSQ		//信号质量
+AT$QCSYSMODE	//查看网络模式
+AT+QTEMP	//查看温度
+AT+QNWCFG="data_path"
+AT+QNWPREFCFG= "mode_pref"		//当前模式
+AT+QNWPREFCFG= "mode_pref",AUTO		//自动选择
+AT+QNWPREFCFG= "mode_pref",LTE		//锁4G
+AT+QNWPREFCFG= "mode_pref",NR5G		//锁5G
+AT+QCFG="data_interface",1,1		//Set the network port through PCIE, diagnostic port through PCIE.
+AT+QCFG="data_interface",1,0		//pcie模式含USB AT指令通道
+AT+QCFG="data_interface",0,0		//usb模式
+AT+QNWPREFCFG="nr5g_disable_mode"	//该命令用于查询 5G NR 配置。
+AT+QNWPREFCFG="nr5g_disable_mode",0	//不禁用 NA 和 NSA
+AT+QNWPREFCFG="nr5g_disable_mode",1	//禁用 SA
+AT+QNWPREFCFG="nr5g_disable_mode",2	//禁用 NSA
+AT+QNWPREFCFG="ue_capability_band" 	//查询 UE 频段能力
+AT+QNWPREFCFG="policy_band" 	      	//查询运营商策略频段
+
+AT+QNWPREFCFG="gw_band" 	//查询 UE 当前配置的 WCDMA 频段。
+AT+QNWPREFCFG="gw_band",1:2 	//设置 WCDMA 频段为 B1 和 B2。
+
+AT+QNWPREFCFG="lte_band"   	//查询 UE 当前配置的 LET频段。
+AT+QNWPREFCFG="lte_band",1:2 	//设置 LTE B1 和 LTE B2。
+
+AT+QNWPREFCFG="nsa_nr5g_band"   		//查询 UE 当前配置的 NSA频段。
+AT+QNWPREFCFG="nsa_nr5g_band",1:2	//设置 5G NR NSA n1 和 5G NR NSA n2。
+
+AT+QNWPREFCFG="nr5g_band"		//查询 UE 当前配置的 SA频段。
+AT+QNWPREFCFG= "nr5g_band",1:2 		//设置 5G NR SA n1 和 5G NR SA n2。
+========================
+AT+CGDCONT?		查询APN
+AT+CGDCONT=1,"IPV4V6","3GNET"	配置APN1>>3GNET（联通）
+AT+CGDCONT=2,"IPV4V6","CMNET"	配置APN2>>CMNET(移动)
+AT+CGDCONT=3,"IPV4V6","CTLTE"	配置APN3>>CTLTE(电信)
+执行AT+QMAPWAC=1启用5G自动拨号功能；
+================================================================
+#SIM卡热插拔（RM500Q默认：AT+QSIMDET=1,1）
+AT+QSIMDET=?
+#硬件特性常开执行此条：
+AT+QSIMDET=1,0
+#硬件特性常闭执行此条：
+AT+QSIMDET=1,1
+
+#PCIE转网口（按顺序执行）
+AT+QCFG="data_interface",1,0	//网卡切换为 PCI 模式
+AT+QCFG="PCIE/MODE",1		//Switch to PCIE EP mode 设置为 PCI 模式
+AT+QETH="eth_driver","r8125"	// PHY r8125 设置为 RTL8125 网卡芯片
+AT+QMAPWAC=1			//enable auto dial 自动拨号
+
+#RM500Q查串号
+AT+EGMR=0,7
+#RM500Q改串号
+AT+EGMR=1,7,"xxxxxxxxxxxxxxxx"
+#RM500Q查IMIE
+AT+CGSN
+
+#RM500 系列恢复出厂指令（高通）
+AT+QCFG="ResetFactory"
+</pre>
+<script>
+    function log(text){
+        var log = document.getElementById("log");
+        var now = new Date();
+        var time = now.toLocaleString();
+        log.value += "[" + time + "] " + text + "\n";
+    }
+    function sendAt() {
+        var code = document.getElementById("code").value.trim();
+        if (code == "") {
+            return;
+        }
+        log(code);
+        (new XHR()).post("<%=luci.dispatcher.build_url("admin", "network", "usbmodem", "send_at")%>", {"code":code}, function(x) {
+            var aStr = x.responseText;
+            log(aStr.replaceAll(/[\r\n]/g," "));
+        });
+    }
+</script>
+
+<%+footer%>

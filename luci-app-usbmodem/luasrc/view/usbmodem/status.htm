@@ -1,0 +1,122 @@
+<%+header%>
+<style>
+    .table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .table .th, .td {
+        border-bottom: 1px solid var(--border-color-medium);
+        font-size: 12px;
+        padding: 10px;
+        text-align: justify;
+        display: table-cell;
+        vertical-align: top;
+    }
+
+    .table .tr:nth-child(odd) {
+        background-color: var(--background-color-medium)
+    }
+
+    .table .th span {
+        font-weight: normal;
+        padding-left: 5px;
+    }
+
+</style>
+<script>
+    function match(text, reg) {
+        let result = text.match(reg);
+        if (result && result.length > 0) {
+            return result[0].replaceAll(reg, '$1');
+        }
+        return '';
+    }
+
+    let $L = function (obj) {
+        return {
+            obj: obj,
+            html: function (html) {
+                this.obj.innerHTML = html
+            }
+        }
+    }
+
+    let $A = function (objs) {
+        return {
+            array: objs,
+            eachMatch: function (text, regx) {
+                for (let i = 0; i < regx.length; i++) {
+                    if (this.array.length > i) {
+                        $L(this.array[i]).html(match(text, regx[i]))
+                    }
+                }
+            }
+        };
+    }
+</script>
+<div class="cbi-map">
+    <div class="cbi-section">
+        <legend>基本信息</legend>
+        <div class="cbi-section-node">
+            <div class="table">
+                <div class="tr table-titles" id="baseInfo">
+                    <div class="th">厂商 : <span>读取中..</span></div>
+                    <div class="th">模组 :<span>读取中..</span></div>
+                    <div class="th">模组版本 :<span>读取中..</span></div>
+                    <div class="th">温度 :<span>读取中..</span></div>
+                    <div class="th">电压 :<span>读取中..</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="cbi-section">
+        <legend>SIM卡信息</legend>
+        <div class="cbi-section-node">
+            <div class="table">
+                <div class="tr table-titles" id="SimInfo">
+                    <div class="th">IMEI :<span>读取中..</span></div>
+                    <div class="th">CIMI :<span>读取中..</span></div>
+                    <div class="th">QCCID :<span>读取中..</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="cbi-section">
+        <legend>信号情况</legend>
+        <div class="cbi-section-node">
+            <div class="table">
+                <div class="tr table-titles" id="CSQInfo">
+                    <div class="th">网络类型 :<span>读取中..</span></div>
+                    <div class="th">CSQ :<span>读取中..</span></div>
+                    <div class="th">信号强度 :<span>读取中..</span></div>
+                </div>
+            </div>
+            <div class="table">
+                <div class="tr table-titles" id="ServingCell">
+                    <div class="th">servingcell :<span>读取中..</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (new XHR()).get('<%=luci.dispatcher.build_url("admin", "network", "usbmodem", "modem_status")%>', null, function (x) {
+            var text = x.responseText;
+            console.log(text)
+            let regx = [/AT\+CGMI\|([^|]+)/g, /AT\+GMM\|([^|]+)/g, /AT\+GMR\|([^|]+)/g, /\+QTEMP:"qfe_wtr_pa0","([^\|]+)"/g, /\+CBC: ([^\|]+)/g];
+            $A(document.querySelectorAll("#baseInfo span")).eachMatch(text, regx);
+
+            regx = [/AT\+GSN\|([^\|]+)/g, /AT\+CIMI\|([^\|]+)/g, /\+QCCID: ([^\|]+)/g];
+            $A(document.querySelectorAll("#SimInfo span")).eachMatch(text, regx);
+
+            regx = [/\+QSPN: ([^\|]+)/g, /\+CSQ: ([^\|]+)/g, /\+QCCID: ([^\|]+)/g];
+            $A(document.querySelectorAll("#CSQInfo span")).eachMatch(text, regx);
+
+            regx = [/\+QENG: "servingcell",([^\|]+)/g];
+            $A(document.querySelectorAll("#ServingCell span")).eachMatch(text, regx);
+        }
+    );
+</script>
+<%+footer%>
